@@ -1,5 +1,5 @@
 use crate::IDL;
-use convert_case::{Casing, Case};
+use convert_case::{Case, Casing};
 
 pub fn make_rpc_accounts(idl: &IDL) -> String {
     idl.instructions.iter().map(|ix| {

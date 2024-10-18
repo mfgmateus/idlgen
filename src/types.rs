@@ -1,8 +1,8 @@
 #![allow(non_snake_case, non_camel_case_types)]
 
+use core::panic;
 use serde::{self, Deserialize, Serialize};
 use serde_json::Value;
-use core::panic;
 use std::convert::From;
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct IDL {
@@ -32,8 +32,8 @@ impl IDL {
             Some(a) => a.clone(),
             None => match self.metadata.address.clone() {
                 Some(a) => a.clone(),
-                None => panic!("Invalid or missing address")
-            }
+                None => panic!("Invalid or missing address"),
+            },
         }
     }
 
@@ -42,8 +42,8 @@ impl IDL {
             Some(a) => a.clone(),
             None => match &self.metadata.version {
                 Some(a) => a.clone(),
-                None => panic!("Invalid or missing version")
-            }
+                None => panic!("Invalid or missing version"),
+            },
         }
     }
 
@@ -52,8 +52,8 @@ impl IDL {
             Some(a) => a.clone(),
             None => match &self.metadata.name {
                 Some(a) => a.clone(),
-                None => panic!("Invalid or missing name")
-            }
+                None => panic!("Invalid or missing name"),
+            },
         }
     }
 }
@@ -195,7 +195,7 @@ impl Default for Type {
 pub struct Kind {
     pub(crate) kind: String,
     pub(crate) variants: Option<Vec<Name>>,
-    pub(crate) fields: Option<Vec<KindField>>,   
+    pub(crate) fields: Option<Vec<KindField>>,
 }
 
 impl Default for Kind {
@@ -233,11 +233,11 @@ pub struct PDA {
 pub struct Seed {
     pub(crate) kind: String,
     #[serde(rename = "type")]
-    pub(crate) of_type: VecEnum,
+    pub(crate) of_type: Option<VecEnum>,
     #[serde(default)]
-    pub(crate) value: String,
+    pub(crate) value: Vec<u8>,
     #[serde(default)]
-    pub(crate) path: String,
+    pub(crate) path: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -268,14 +268,13 @@ pub enum InstructionType {
     BTreeSet(Box<InstructionType>),
     // 0.30.0 types
     pubkey,
-    Defined(Value)
+    Defined(Value),
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DefinedType {
-    name: String
+    name: String,
 }
-
 
 impl ToString for InstructionType {
     fn to_string(&self) -> String {
@@ -286,8 +285,15 @@ impl ToString for InstructionType {
             InstructionType::Defined(v) => {
                 match v {
                     Value::String(_) => v.as_str().unwrap().to_string(), // <0.30.0
-                    Value::Object(_) => v.as_object().unwrap().get("name").unwrap().as_str().unwrap().to_string(), // ^0.30.0
-                    _ => panic!("Invalid IDL")
+                    Value::Object(_) => v
+                        .as_object()
+                        .unwrap()
+                        .get("name")
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        .to_string(), // ^0.30.0
+                    _ => panic!("Invalid IDL"),
                 }
             }
             InstructionType::I128 => "i128".to_string(),
@@ -296,7 +302,13 @@ impl ToString for InstructionType {
             InstructionType::I64 => "i64".to_string(),
             InstructionType::I8 => "i8".to_string(),
             InstructionType::Option(t) => format!("Option<{}>", t.to_string()),
-            InstructionType::Tuple(t) => format!("({})", t.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(", ")),
+            InstructionType::Tuple(t) => format!(
+                "({})",
+                t.iter()
+                    .map(|t| t.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             InstructionType::pubkey | InstructionType::PublicKey => "Pubkey".to_string(),
             InstructionType::String => "String".to_string(),
             InstructionType::U128 => "u128".to_string(),
@@ -305,8 +317,12 @@ impl ToString for InstructionType {
             InstructionType::U64 => "u64".to_string(),
             InstructionType::U8 => "u8".to_string(),
             InstructionType::Vec(t) => format!("Vec<{}>", t.to_string()),
-            InstructionType::HashMap(t1, t2) => format!("HashMap<{}, {}>", t1.to_string(), t2.to_string()),
-            InstructionType::BTreeMap(t1, t2) => format!("BTreeMap<{}, {}>", t1.to_string(), t2.to_string()),
+            InstructionType::HashMap(t1, t2) => {
+                format!("HashMap<{}, {}>", t1.to_string(), t2.to_string())
+            }
+            InstructionType::BTreeMap(t1, t2) => {
+                format!("BTreeMap<{}, {}>", t1.to_string(), t2.to_string())
+            }
             InstructionType::HashSet(t) => format!("HashSet<{}>", t.to_string()),
             InstructionType::BTreeSet(t) => format!("BTreeSet<{}>", t.to_string()),
         }

@@ -1,22 +1,29 @@
-use crate::{generators::common::{make_ix_arg_names, make_ix_args, make_ix_has_info}, IDL};
-use convert_case::{Casing, Case};
+use crate::{
+    generators::common::{make_ix_arg_names, make_ix_args, make_ix_has_info},
+    IDL,
+};
+use convert_case::{Case, Casing};
 
 pub fn make_cpi_ctxs(idl: &IDL) -> String {
-    format!("pub mod cpi {{
+    format!(
+        "pub mod cpi {{
     #![allow(unused)]
     use anchor_lang::Discriminator;
     use super::*;
 
 {}  
 }}",
-    idl.instructions.iter().map(|ix| {
-        let ix_name_pascal =  ix.name.to_case(Case::Pascal);
-        let ix_name_snake =  ix.name.to_case(Case::Snake);
-        let ix_has_info = make_ix_has_info(ix);
-        let ix_args = make_ix_args(ix);
-        let ix_arg_names = make_ix_arg_names(ix);
+        idl.instructions
+            .iter()
+            .map(|ix| {
+                let ix_name_pascal = ix.name.to_case(Case::Pascal);
+                let ix_name_snake = ix.name.to_case(Case::Snake);
+                let ix_has_info = make_ix_has_info(ix);
+                let ix_args = make_ix_args(ix);
+                let ix_arg_names = make_ix_arg_names(ix);
 
-        format!("    pub fn {}<'a, 'b, 'c, 'info>(
+                format!(
+                    "    pub fn {}<'a, 'b, 'c, 'info>(
         ctx: CpiContext<'a, 'b, 'c, 'info, {}{}>{}
     ) -> anchor_lang::Result<()> {{
         let ix = {{
@@ -35,32 +42,62 @@ pub fn make_cpi_ctxs(idl: &IDL) -> String {
         let mut acc_infos = ctx.to_account_infos();
         anchor_lang::solana_program::program::invoke_signed(&ix, &acc_infos, ctx.signer_seeds)
             .map_or_else(|e| Err(Into::into(e)), |_| Ok(()))
-    }}", ix_name_snake, ix_name_pascal, ix_has_info, ix_args, ix_name_pascal, ix_arg_names, ix_name_pascal)
-        }).collect::<Vec<String>>().join("\n\n")
+    }}",
+                    ix_name_snake,
+                    ix_name_pascal,
+                    ix_has_info,
+                    ix_args,
+                    ix_name_pascal,
+                    ix_arg_names,
+                    ix_name_pascal
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n\n")
     )
 }
 
 pub fn make_cpi_accounts(idl: &IDL) -> String {
-    idl.instructions.iter().map(|ix| {
-        let ix_name_pascal =  ix.name.to_case(Case::Pascal);
-        if ix.accounts.len() == 0 {
-            return format!("#[derive(Accounts)]
-pub struct {} {{}}", ix_name_pascal)
-        }
-        format!("#[derive(Accounts)]
+    idl.instructions
+        .iter()
+        .map(|ix| {
+            let ix_name_pascal = ix.name.to_case(Case::Pascal);
+            if ix.accounts.len() == 0 {
+                return format!(
+                    "#[derive(Accounts)]
+pub struct {} {{}}",
+                    ix_name_pascal
+                );
+            }
+            format!(
+                "#[derive(Accounts)]
 pub struct {}<'info> {{
 {}
-}}", ix_name_pascal, ix.accounts.iter().map(|a| {
-        let mut kind = "AccountInfo<'info>".to_string();
-        if a.isOptional {
-            kind = format!("Option<{}>", kind);
-        }
-        let constraints = match (a.isMut, a.isSigner) {
-            (true, true) | (false, true) => "    #[account(mut, signer)]\n",
-            (true, false) => "    #[account(mut)]\n",
-            (false, false) => ""
-        };
-        format!("{}    /// CHECK: Skip check\n    pub {}: {},", constraints, a.name.to_case(Case::Snake), kind)
-        }).collect::<Vec<String>>().join("\n"))
-    }).collect::<Vec<String>>().join("\n\n")
+}}",
+                ix_name_pascal,
+                ix.accounts
+                    .iter()
+                    .map(|a| {
+                        let mut kind = "AccountInfo<'info>".to_string();
+                        if a.isOptional {
+                            kind = format!("Option<{}>", kind);
+                        }
+                        let constraints = match (a.isMut, a.isSigner) {
+                            (true, true) | (false, true) => "    #[account(mut, signer)]\n",
+                            (true, false) => "    #[account(mut)]\n",
+                            (false, false) => "",
+                        };
+                        format!(
+                            "{}    /// CHECK: Skip check\n    pub {}: {},",
+                            constraints,
+                            a.name.to_case(Case::Snake),
+                            kind
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\n\n")
 }
